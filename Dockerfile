@@ -1,21 +1,34 @@
-# Dockerfile
+## Dockerfile for Hugging Face Space (Docker runtime)
+## Runs a FastAPI app with uvicorn on port 7860.
+
 FROM python:3.12-slim
 
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential curl && \
-    rm -rf /var/lib/apt/lists/*
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PORT=7860
 
 WORKDIR /app
 
-# Dépendances
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# System deps (keep minimal). Add build tools for wheels if needed.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+       build-essential \
+       curl \
+    && rm -rf /var/lib/apt/lists/*
 
+# Install Python deps first for better layer caching
+COPY requirements.txt pyproject.toml ./
+RUN python -m pip install --upgrade pip setuptools wheel \
+    && pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+# Copy the application code
+COPY . /app
 
+# Install package (editable or standard). Editable is fine in container.
+RUN pip install -e .
 
-EXPOSE 8000
+# Hugging Face Spaces expect port 7860
+EXPOSE ${PORT}
 
-
+# Start FastAPI app
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "7860", "--workers", "1", "--proxy-headers"]
