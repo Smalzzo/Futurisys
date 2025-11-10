@@ -1,8 +1,6 @@
 *.db
 *.sqlite
 *.sqlite3
-*.pkl
-*.pickle
 __pycache__/
 .pytest_cache/
 .coverage
@@ -12,5 +10,4 @@ venv/
 .env
 .DS_Store
 Thumbs.db
-app/ml/model.pkl
 
