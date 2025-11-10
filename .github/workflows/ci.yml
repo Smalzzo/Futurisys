@@ -55,7 +55,7 @@ jobs:
           lfs: true
       - name: Push to Hugging Face Space
         env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_TOKEN: ${{ secrets.FUTURYSIS_TOKEN }}
           HF_SPACE: ${{ env.HF_SPACE }}
         run: |
           git config user.name "github-actions[bot]"
