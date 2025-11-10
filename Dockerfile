@@ -7,6 +7,12 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PORT=7860
 
+# User non-root
+RUN useradd -m -u 1000 user
+USER user
+ENV HOME=/home/user \
+    PATH=/home/user/.local/bin:$PATH    
+
 WORKDIR /app
 
 # System deps (keep minimal). Add build tools for wheels if needed.
@@ -28,8 +34,7 @@ RUN python -m pip install --upgrade pip setuptools wheel \
 # Copy the application code
 COPY . /app
 
-# Install package (editable or standard). Editable is fine in container.
-RUN pip install -e .
+
 
 # Hugging Face Spaces expect port 7860
 EXPOSE ${PORT}
