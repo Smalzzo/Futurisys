@@ -1,3 +1,13 @@
+---
+title: Futurisys ML Service
+emoji: 🐍
+colorFrom: blue
+colorTo: green
+sdk: docker
+pinned: false
+---
+
+
 # ML Service POC (FastAPI + PostgreSQL)
 
 POC de déploiement d'un modèle de machine learning via une API FastAPI, avec (PostgreSQL en dev) et (sqlite en prod) et tests Pytest + couverture.
