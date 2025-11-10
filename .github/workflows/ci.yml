@@ -53,30 +53,47 @@ jobs:
         with:
           fetch-depth: 0
           lfs: true
-      - name: Build and push Docker image to Hugging Face Spaces
+
+
+
+
+      # Refuser des .db suivis par Git (bloque le push HF)
+      - name: Sanity — pas de .db versionnés
+        run: |
+          set -e
+          if git ls-files "*.db" | grep -q .; then
+            echo "::error ::Des fichiers .db sont suivis par Git. Faites :"
+            echo "  git rm --cached ml_service.db && echo '*.db' >> .gitignore && git commit -m 'Ignore .db'"
+            exit 1
+          fi
+
+      # Préparer un dossier d'upload sans .git/.github ni *.db
+      - name: Préparer le dossier de déploiement (sources uniquement)
+        run: |
+          set -e
+          rm -rf deploy && mkdir deploy
+          rsync -a --delete \
+            --exclude='.git' --exclude='.github' \
+            --exclude='*.db' --exclude='**/*.db' \
+            ./ deploy/
+
+      # LFS pour les modèles .pkl (critique pour model.pkl)
+      - name: Push sources vers la Space (HF build)
         env:
           HF_TOKEN: ${{ secrets.HF_SECRET }}
           HF_SPACE: ${{ env.HF_SPACE }}
         run: |
-          # Extract space ID from HF_SPACE (format: username/space-name)
-          SPACE_ID=$(echo $HF_SPACE | cut -d'/' -f1)
-          
-          # Tag the image for HF registry
-          IMAGE_TAG="spaces-registry-us.huggingface.tech/$SPACE_ID/spaces:latest"
-          
-          # Build the image
-          docker build -t $IMAGE_TAG .
-          
-          # Login to HF registry with token as password
-          echo "$HF_TOKEN" | docker login --username "${{ env.HF_USERNAME }}" --password-stdin spaces-registry-us.huggingface.tech
-          
-          # Push the image
-          docker push $IMAGE_TAG
-      - name: Push source code to Hugging Face Space
-        env:
-          HF_TOKEN: ${{ secrets.HF_SECRET }}
-          HF_SPACE: ${{ env.HF_SPACE }}
-        run: |
-          git config user.name "github-actions[bot]"
+          set -e
+          cd deploy
+          git init
+          git lfs install
+          git lfs track "*.pkl"   
+          git add .gitattributes
+          git add .
+          git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git push "https://${HF_USERNAME}:${HF_TOKEN}@huggingface.co/spaces/${HF_SPACE}" HEAD:main --force --verbose
+          git commit -m "Deploy ${GITHUB_SHA}"
+          git branch -M main
+          git remote add origin "https://oauth2:${HF_TOKEN}@huggingface.co/spaces/${HF_SPACE}"
+          git push -f origin main
+
