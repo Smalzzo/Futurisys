@@ -53,7 +53,19 @@ jobs:
         with:
           fetch-depth: 0
           lfs: true
-      - name: Push to Hugging Face Space
+      - name: Login to Hugging Face Registry
+        env:
+          HF_TOKEN: ${{ secrets.HF_SECRET }}
+        run: |
+          echo "$HF_TOKEN" | docker login --username "${{ env.HF_USERNAME }}" --password-stdin https://hub.docker.com
+      - name: Build Docker image
+        run: |
+          docker build -t ${{ env.HF_USERNAME }}/futurisys:latest -t ${{ env.HF_USERNAME }}/futurisys:$(git rev-parse --short HEAD) .
+      - name: Push Docker image to Hugging Face
+        run: |
+          docker push ${{ env.HF_USERNAME }}/futurisys:latest
+          docker push ${{ env.HF_USERNAME }}/futurisys:$(git rev-parse --short HEAD)
+      - name: Push source code to Hugging Face Space
         env:
           HF_TOKEN: ${{ secrets.HF_SECRET }}
           HF_SPACE: ${{ env.HF_SPACE }}
