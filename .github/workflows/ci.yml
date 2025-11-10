@@ -53,18 +53,40 @@ jobs:
         with:
           fetch-depth: 0
           lfs: true
-      - name: Login to Hugging Face Registry
+      - name: Build and push Docker image to Hugging Face Spaces
         env:
           HF_TOKEN: ${{ secrets.HF_SECRET }}
+          HF_SPACE: ${{ env.HF_SPACE }}
         run: |
-          echo "$HF_TOKEN" | docker login --username "${{ env.HF_USERNAME }}" --password-stdin https://hub.docker.com
-      - name: Build Docker image
-        run: |
-          docker build -t ${{ env.HF_USERNAME }}/futurisys:latest -t ${{ env.HF_USERNAME }}/futurisys:$(git rev-parse --short HEAD) .
-      - name: Push Docker image to Hugging Face
-        run: |
-          docker push ${{ env.HF_USERNAME }}/futurisys:latest
-          docker push ${{ env.HF_USERNAME }}/futurisys:$(git rev-parse --short HEAD)
+          # Extract space ID from HF_SPACE (format: username/space-name)
+          SPACE_ID=$(echo $HF_SPACE | cut -d'/' -f1)
+          
+          # Tag the image for HF registry
+          IMAGE_TAG="spaces-registry-us.huggingface.tech/$SPACE_ID/spaces:latest"
+          
+          # Build the image
+          docker build -t $IMAGE_TAG .
+          
+          # Login to HF registry with token as password
+          echo "$HF_TOKEN" | docker login --username "${{ env.HF_USERNAME }}" --password-stdin spaces-registry-us.huggingface.tech
+          
+          # Push with retry logic (in case of network issues)
+          max_retries=3
+          retry_count=0
+          until [ $retry_count -ge $max_retries ]
+          do
+            if docker push $IMAGE_TAG; then
+              echo "Docker push succeeded"
+              break
+            fi
+            retry_count=$((retry_count + 1))
+            echo "Push failed, retrying ($retry_count/$max_retries)..."
+            sleep $((2**retry_count))
+          done
+          if [ $retry_count -ge $max_retries ]; then
+            echo "Docker push failed after $max_retries attempts" >&2
+            exit 1
+          fi
       - name: Push source code to Hugging Face Space
         env:
           HF_TOKEN: ${{ secrets.HF_SECRET }}
