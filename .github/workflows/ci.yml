@@ -1,17 +1,27 @@
-name: CI
+name: CI + CD to Hugging Face
+
 on:
   push:
     branches: ["**"]
     tags: ["v*.*.*"]
   pull_request:
+  workflow_dispatch:
+
+env:
+  PYTHON_VERSION: "3.12"
+  HF_SPACE: "sma-nas/Futurisys"
+  HF_USERNAME: "sma-nas"
+
 jobs:
-  INSTALL-BUILD-TEST-COVERAGE:
+  INSTALL-BUILD-TEST:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          lfs: true
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: ${{ env.PYTHON_VERSION }}
       - name: Installation dependances
         run: |
           python -m pip install --upgrade pip
@@ -30,8 +40,24 @@ jobs:
         with:
           name: coverage-xml
           path: coverage.xml
-      - name: Upload dist
-        uses: actions/upload-artifact@v4
+  DEPLOY-TO-HF:
+    needs: [INSTALL-BUILD-TEST]
+    if: >
+      success() && (
+        startsWith(github.ref, 'refs/heads/main') ||
+        startsWith(github.ref, 'refs/tags/v')
+      )
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
         with:
-          name: dist
-          path: dist/*
+          fetch-depth: 0
+          lfs: true
+      - name: Push to Hugging Face Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_SPACE: ${{ env.HF_SPACE }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git push "https://${HF_USERNAME}:${HF_TOKEN}@huggingface.co/spaces/${HF_SPACE}" HEAD:main --force-with-lease --verbose
