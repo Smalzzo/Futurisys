@@ -32,3 +32,4 @@ coverage.xml
 app/ml/model.pkl
 *.csv
 pgdata/
+*ml_service.db
