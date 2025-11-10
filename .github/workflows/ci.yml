@@ -64,29 +64,42 @@ jobs:
           # Tag the image for HF registry
           IMAGE_TAG="spaces-registry-us.huggingface.tech/$SPACE_ID/spaces:latest"
           
-          # Build the image
+          echo "Building Docker image: $IMAGE_TAG"
           docker build -t $IMAGE_TAG .
           
-          # Login to HF registry with token as password
+          echo "Logging in to HF registry..."
           echo "$HF_TOKEN" | docker login --username "${{ env.HF_USERNAME }}" --password-stdin spaces-registry-us.huggingface.tech
           
-          # Push with retry logic (in case of network issues)
-          max_retries=3
+          echo "Pushing Docker image with retry logic..."
+          
+          # Push with enhanced retry logic for network timeouts
+          max_retries=5
           retry_count=0
-          until [ $retry_count -ge $max_retries ]
-          do
-            if docker push $IMAGE_TAG; then
-              echo "Docker push succeeded"
-              break
+          retry_delay=10
+          
+          while [ $retry_count -lt $max_retries ]; do
+            echo "Push attempt $((retry_count + 1))/$max_retries"
+            
+            # Set aggressive timeout to catch hanging connections early
+            if timeout 600 docker push $IMAGE_TAG; then
+              echo "✓ Docker push succeeded"
+              exit 0
             fi
+            
+            push_exit=$?
+            echo "Push attempt $((retry_count + 1)) failed with exit code $push_exit"
+            
             retry_count=$((retry_count + 1))
-            echo "Push failed, retrying ($retry_count/$max_retries)..."
-            sleep $((2**retry_count))
+            
+            if [ $retry_count -lt $max_retries ]; then
+              echo "Waiting ${retry_delay}s before retry..."
+              sleep $retry_delay
+              retry_delay=$((retry_delay + 10))  # Exponential backoff: 10s, 20s, 30s, etc.
+            fi
           done
-          if [ $retry_count -ge $max_retries ]; then
-            echo "Docker push failed after $max_retries attempts" >&2
-            exit 1
-          fi
+          
+          echo "✗ Docker push failed after $max_retries attempts" >&2
+          exit 1
       - name: Push source code to Hugging Face Space
         env:
           HF_TOKEN: ${{ secrets.HF_SECRET }}
