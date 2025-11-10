@@ -7,23 +7,18 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PORT=7860
 
-# User non-root
-RUN useradd -m -u 1000 user
-USER user
-ENV HOME=/home/user \
-    PATH=/home/user/.local/bin:$PATH    
-
+# Workdir
 WORKDIR /app
 
 # System deps (keep minimal). Add build tools for wheels if needed.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-       build-essential \
-       curl \
-       git \
-       git-lfs \
-    && rm -rf /var/lib/apt/lists* \
-    && git lfs install
+     && apt-get install -y --no-install-recommends \
+         build-essential \
+         curl \
+         git \
+         git-lfs \
+     && rm -rf /var/lib/apt/lists/* \
+     && git lfs install
 
 
 # Install Python deps first for better layer caching
@@ -34,6 +29,13 @@ RUN python -m pip install --upgrade pip setuptools wheel \
 # Copy the application code
 COPY . /app
 
+# Create a non-root user and fix permissions (do this after installing packages)
+RUN useradd -m -u 1000 user \
+    && chown -R user:user /app
+
+USER user
+ENV HOME=/home/user \
+    PATH=/home/user/.local/bin:$PATH
 
 
 # Hugging Face Spaces expect port 7860
