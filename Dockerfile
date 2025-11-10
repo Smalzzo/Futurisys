@@ -14,7 +14,11 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends \
        build-essential \
        curl \
-    && rm -rf /var/lib/apt/lists/*
+       git \
+       git-lfs \
+    && rm -rf /var/lib/apt/lists* \
+    && git lfs install
+
 
 # Install Python deps first for better layer caching
 COPY requirements.txt pyproject.toml ./
