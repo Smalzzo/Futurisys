@@ -31,7 +31,7 @@ class Settings(BaseSettings):
 
     @property
     def database_url(self) -> str:
-        """Construit l'URL SQLAlchemy avec psycopg (v3)."""
+        """Construit l'URL SQLAlchemy avec psycopg (v3).
         if self.database_url_env:
             return self.database_url_env  
         user = self.POSTGRES_USER
@@ -41,6 +41,11 @@ class Settings(BaseSettings):
         db   = self.POSTGRES_DB
         # driver psycopg v3
         return f"postgresql+psycopg://{user}:{pwd}@{host}:{port}/{db}"
+        """
+        if self.database_url_env:  # override complet
+            return self.database_url_env        
+        
+        return "sqlite:////data/app.db" 
 
     @property
     def DATABASE_URL(self) -> str:        

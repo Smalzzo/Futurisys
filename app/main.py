@@ -19,6 +19,8 @@ async def lifespan(app: FastAPI):
     # Crée les tables automatiquement si backend SQLite
     try:
         if make_url(get_settings().DATABASE_URL).get_backend_name() == "sqlite":
+            import os
+            os.makedirs("/data", exist_ok=True)
             Base.metadata.create_all(bind=engine)
             try:
                 script_path = Path(__file__).resolve().parents[1] / "scripts" / "create_db.py"

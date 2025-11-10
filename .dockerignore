@@ -8,3 +8,5 @@ build
 .venv
 .env
 .DS_Store
+*.db
+/data/*.db
