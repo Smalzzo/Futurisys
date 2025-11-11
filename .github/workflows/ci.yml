@@ -101,6 +101,17 @@ jobs:
           print('Upload complete')
           PY
       
+      # Préparer un dossier d'upload sans .git/.github, *.db, ni fichiers binaires
+      # (HF refuses binary files; the model will be downloaded at runtime)
+      - name: Préparer le dossier de déploiement (sources uniquement)
+        run: |
+          set -e
+          rm -rf deploy && mkdir deploy
+          rsync -a --delete \
+            --exclude='.git' --exclude='.github' \
+            --exclude='*.db' --exclude='**/*.db' \
+            --exclude='app/ml/model.pkl' \
+            ./ deploy/
 
       - name: Push sources vers la Space (HF build)
         env:
