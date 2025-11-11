@@ -10,6 +10,7 @@ on:
 env:
   PYTHON_VERSION: "3.12"
   HF_SPACE: "sma-nas/Futurisys"
+  HF_MODEL_REPO: "sma-nas/Futurysis"
   HF_USERNAME: "sma-nas"
 
 # Workflow permissions required for Pages deployments and artifact access
@@ -60,20 +61,22 @@ jobs:
           fetch-depth: 0
           lfs: true
 
+      
+
       # chargement du model.pkl sur Hugging Face model repo , l'app peut le télécharger
       # et utilise le token HF stocké dans secrets.HF_SECRET.
-      - name: Chragement du ùodel sur HF  Model repo
+      - name: Chargement du modèle sur HF (Model repo)
         env:
           HF_TOKEN: ${{ secrets.HF_SECRET }}
-          MODEL_REPO_ID: ${{ env.HF_SPACE }}
+          MODEL_REPO_ID: ${{ env.HF_MODEL_REPO }}
           MODEL_FILENAME: model.pkl
         run: |
-          set -e
+          set -euo pipefail
           python -m pip install --upgrade pip
           pip install huggingface_hub
           python - <<'PY'
           import os, sys
-          from huggingface_hub import HfApi
+          from huggingface_hub import HfApi, create_repo
 
           repo_id = os.environ.get('MODEL_REPO_ID')
           filename = os.environ.get('MODEL_FILENAME', 'model.pkl')
@@ -83,15 +86,17 @@ jobs:
               print('Model not found at', local_path, '- skipping upload')
               sys.exit(0)
 
-          api = HfApi()
           token = os.environ.get('HF_TOKEN')
+          # on créé le repo s il n existe pas
+          create_repo(repo_id=repo_id, repo_type='model', private=True, token=token, exist_ok=True)
+
+          api = HfApi(token=token)
           print('Uploading', local_path, 'to', repo_id)
           api.upload_file(
               path_or_fileobj=local_path,
               path_in_repo=filename,
               repo_id=repo_id,
               repo_type='model',
-              token=token,
           )
           print('Upload complete')
           PY
