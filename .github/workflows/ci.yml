@@ -86,9 +86,10 @@ jobs:
           set -e
           cd deploy
           git init
-          git lfs install
-          git lfs track "*.pkl"   
-          git add .gitattributes
+          # Do not initialize or track Git LFS here. The repository now stores the
+          # small `app/ml/model.pkl` as a normal git blob, and attempting to
+          # track "*.pkl" in this temporary deploy repo caused pushes to fail
+          # due to missing LFS objects in the runner environment.
           git add .
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
