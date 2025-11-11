@@ -32,7 +32,12 @@ async def lifespan(app: FastAPI):
                 pass
     except Exception:
         pass
-    model_service.load()            
+    try:
+        model_service.load()
+    except FileNotFoundError:
+        import logging
+        logging.warning("Model file not found during startup; will load on first prediction.")
+    
     yield
     model_service.close()
 
