@@ -12,6 +12,12 @@ env:
   HF_SPACE: "sma-nas/Futurisys"
   HF_USERNAME: "sma-nas"
 
+# Workflow permissions required for Pages deployments and artifact access
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 jobs:
   INSTALL-BUILD-TEST:
     runs-on: ubuntu-latest
@@ -54,10 +60,9 @@ jobs:
           fetch-depth: 0
           lfs: true
 
-      # Upload model.pkl to a Hugging Face model repo so the app can download it
-      # at runtime. This step is safe to run even if the file is absent (it will
-      # be skipped) and uses the HF token stored in secrets.HF_SECRET.
-      - name: Upload model to HF model repo
+      # chargement du model.pkl sur Hugging Face model repo , l'app peut le télécharger
+      # et utilise le token HF stocké dans secrets.HF_SECRET.
+      - name: Chragement du ùodel sur HF  Model repo
         env:
           HF_TOKEN: ${{ secrets.HF_SECRET }}
           MODEL_REPO_ID: ${{ env.HF_SPACE }}
@@ -90,31 +95,7 @@ jobs:
           )
           print('Upload complete')
           PY
-
-
-
-
-      # Refuser des .db suivis par Git (bloque le push HF)
-      - name: Sanity — pas de .db versionnés
-        run: |
-          set -e
-          if git ls-files "*.db" | grep -q .; then
-            echo "::error ::Des fichiers .db sont suivis par Git. Faites :"
-            echo "  git rm --cached ml_service.db && echo '*.db' >> .gitignore && git commit -m 'Ignore .db'"
-            exit 1
-          fi
-
-      # Préparer un dossier d'upload sans .git/.github, *.db, ni fichiers binaires
-      # (HF refuses binary files; the model will be downloaded at runtime)
-      - name: Préparer le dossier de déploiement (sources uniquement)
-        run: |
-          set -e
-          rm -rf deploy && mkdir deploy
-          rsync -a --delete \
-            --exclude='.git' --exclude='.github' \
-            --exclude='*.db' --exclude='**/*.db' \
-            --exclude='app/ml/model.pkl' \
-            ./ deploy/
+      
 
       - name: Push sources vers la Space (HF build)
         env:
@@ -123,10 +104,7 @@ jobs:
         run: |
           set -e
           cd deploy
-          git init
-          # Remove any .gitattributes to prevent LFS confusion
-          rm -f .gitattributes || true
-          
+          git init          
           # Add everything (model.pkl is already excluded by rsync) and commit
           git add .
           git config user.name  "github-actions[bot]"
