@@ -5,12 +5,15 @@ __pycache__/
 .pytest_cache/
 .coverage
 coverage.xml
+.git
+.git-lfs
+__pycache__/
+*.pyc
+.env
 .venv
 venv/
-.env
-.DS_Store
-Thumbs.db
+dist/
+build/
 *.pkl
-models/
-app/ml/model.pkl
+
 

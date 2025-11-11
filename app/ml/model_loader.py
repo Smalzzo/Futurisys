@@ -4,7 +4,7 @@ from huggingface_hub import hf_hub_download
 import joblib
 
 MODEL_LOCAL = os.getenv("MODEL_LOCAL", "app/ml/model.pkl")
-MODEL_REPO_ID = os.getenv("MODEL_REPO_ID", "sma-nas/Futurisys")  # à adapter
+MODEL_REPO_ID = os.getenv("MODEL_REPO_ID", "sma-nas/Futurisys") 
 MODEL_FILENAME = os.getenv("MODEL_FILENAME", "model.pkl")
 
 _model = None
