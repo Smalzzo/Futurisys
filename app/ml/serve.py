@@ -13,8 +13,11 @@ class ModelService:
         self.model: Pipeline | None = None
 
     def load(self):
+        """Load model from disk. If model doesn't exist, log warning and defer loading."""
         if not os.path.exists(self.model_path):
-            raise FileNotFoundError(f"Model file not found: {self.model_path}")
+            import logging
+            logging.warning(f"Model file not found at {self.model_path}. Deferring load until first prediction.")
+            return self
         self.model = joblib.load(self.model_path)  
         return self
 
@@ -27,7 +30,11 @@ class ModelService:
 
     def predict_proba(self, payload: Dict[str, Any]) -> float:
         if self.model is None:
-            self.load()
+            # Lazy load: try to load model if not already loaded
+            if os.path.exists(self.model_path):
+                self.load()
+            else:
+                raise FileNotFoundError(f"Model file not found: {self.model_path}. Cannot proceed with prediction.")
         X = pd.DataFrame([payload])
         p = self.model.predict_proba(X)           
         estimator = self._final_estimator()             
