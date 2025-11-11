@@ -50,6 +50,15 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
     
+    @app.get("/")
+    async def root():
+        """Root endpoint — redirects to API documentation."""
+        return {
+            "message": "Futurisys ML API",
+            "version": "0.1.0",
+            "docs": "/docs",
+            "openapi": "/openapi.json"
+        }
 
     app.include_router(api_router, prefix=settings.API_V1_PREFIX)
 
