@@ -67,7 +67,8 @@ jobs:
             exit 1
           fi
 
-      # Préparer un dossier d'upload sans .git/.github ni *.db
+      # Préparer un dossier d'upload sans .git/.github, *.db, ni fichiers binaires
+      # (HF refuses binary files; the model will be downloaded at runtime)
       - name: Préparer le dossier de déploiement (sources uniquement)
         run: |
           set -e
@@ -75,9 +76,11 @@ jobs:
           rsync -a --delete \
             --exclude='.git' --exclude='.github' \
             --exclude='*.db' --exclude='**/*.db' \
+            --exclude='app/ml/model.pkl' \
             ./ deploy/
 
-      # LFS pour les modèles .pkl (critique pour model.pkl)
+      # LFS 및 binary files를 제외하고 소스만 HF Space로 푸시
+      # (HF는 binary files를 거부하므로 model.pkl은 런타임에 다운로드됨)
       - name: Push sources vers la Space (HF build)
         env:
           HF_TOKEN: ${{ secrets.HF_SECRET }}
@@ -86,20 +89,10 @@ jobs:
           set -e
           cd deploy
           git init
-          # Ensure we don't push LFS configuration or pointers. Remove any
-          # .gitattributes copied into the temporary deploy repo so the remote
-          # pre-receive hook won't treat files as LFS pointers.
+          # Remove any .gitattributes to prevent LFS confusion
           rm -f .gitattributes || true
-
-          # Ensure the model file is the actual blob from the checked-out
-          # workspace (not an LFS pointer). Copy it from the runner's working
-          # directory if present.
-          if [ -f ../app/ml/model.pkl ]; then
-            mkdir -p app/ml
-            cp ../app/ml/model.pkl app/ml/model.pkl
-          fi
-
-          # Add everything and commit
+          
+          # Add everything (model.pkl is already excluded by rsync) and commit
           git add .
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
