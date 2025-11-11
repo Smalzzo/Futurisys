@@ -1,0 +1,36 @@
+site_name: ML Service Docs
+site_description: Documentation de l'API FastAPI et du modèle ML
+repo_url: https://github.com/OWNER/REPO
+theme:
+  name: material
+  language: fr
+  features:
+    - navigation.sections
+    - navigation.top
+    - toc.integrate
+    - content.code.copy
+nav:
+  - Accueil: index.md
+  - Démarrage: getting-started.md
+  - API:
+    - Aperçu: api.md
+    - Référence (routes): reference/api.md
+  - Modèle ML: model.md
+  - Architecture: architecture.md
+  - Déploiement: deployment.md
+  - Configuration: configuration.md
+  - Maintenance: maintenance.md
+  - Journal des changements: changelog.md
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            docstring_style: google
+            show_source: false
+markdown_extensions:
+  - admonition
+  - codehilite
+  - toc:
+      permalink: true

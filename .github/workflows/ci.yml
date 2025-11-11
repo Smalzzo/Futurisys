@@ -54,6 +54,43 @@ jobs:
           fetch-depth: 0
           lfs: true
 
+      # Upload model.pkl to a Hugging Face model repo so the app can download it
+      # at runtime. This step is safe to run even if the file is absent (it will
+      # be skipped) and uses the HF token stored in secrets.HF_SECRET.
+      - name: Upload model to HF model repo
+        env:
+          HF_TOKEN: ${{ secrets.HF_SECRET }}
+          MODEL_REPO_ID: ${{ env.HF_SPACE }}
+          MODEL_FILENAME: model.pkl
+        run: |
+          set -e
+          python -m pip install --upgrade pip
+          pip install huggingface_hub
+          python - <<'PY'
+          import os, sys
+          from huggingface_hub import HfApi
+
+          repo_id = os.environ.get('MODEL_REPO_ID')
+          filename = os.environ.get('MODEL_FILENAME', 'model.pkl')
+          local_path = os.path.join(os.getcwd(), 'app', 'ml', filename)
+
+          if not os.path.isfile(local_path):
+              print('Model not found at', local_path, '- skipping upload')
+              sys.exit(0)
+
+          api = HfApi()
+          token = os.environ.get('HF_TOKEN')
+          print('Uploading', local_path, 'to', repo_id)
+          api.upload_file(
+              path_or_fileobj=local_path,
+              path_in_repo=filename,
+              repo_id=repo_id,
+              repo_type='model',
+              token=token,
+          )
+          print('Upload complete')
+          PY
+
 
 
 
@@ -79,8 +116,6 @@ jobs:
             --exclude='app/ml/model.pkl' \
             ./ deploy/
 
-      # LFS 및 binary files를 제외하고 소스만 HF Space로 푸시
-      # (HF는 binary files를 거부하므로 model.pkl은 런타임에 다운로드됨)
       - name: Push sources vers la Space (HF build)
         env:
           HF_TOKEN: ${{ secrets.HF_SECRET }}

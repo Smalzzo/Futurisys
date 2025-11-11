@@ -60,8 +60,15 @@ pytest --cov=app --cov-report=term-missing
 
 
 ## 4. CI
-Workflow GitHub Actions pour exécuter les tests et publier le rapport de couverture.
+- Tests + couverture: `.github/workflows/ci.yml`
+- Documentation MkDocs: `.github/workflows/docs.yml` (déploie sur GitHub Pages)
 
-## 5. Sécurité
+## 5. Documentation (MkDocs)
+- Construire localement:
+  - `pip install mkdocs-material mkdocstrings[python]`
+  - `mkdocs serve` (prévisualisation) ou `mkdocs build`
+- Contenu: voir le dossier `docs/` et `mkdocs.yml`
+
+## 6. Sécurité
 API key simple via `x-api-key`.manager.
 
