@@ -5,7 +5,11 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-import psycopg
+try:
+    import psycopg
+except ImportError:
+    psycopg = None  # Optional for SQLite-only usage
+
 from sqlalchemy import create_engine, text
 
 # Essayez d'utiliser la config + ORM de l'app (même DB / mêmes tables)
@@ -73,20 +77,69 @@ def _upper_strip_series(s: pd.Series) -> pd.Series:
 
 def lancesqlite_Initialisation():
     print(f"[Initialisation_SQLITE] IMPORTS_DIR = {IMPORTS_DIR}")
-    if not IMPORTS_DIR.exists():
-        raise SystemExit(f"Dossier imports introuvable: {IMPORTS_DIR}")
-
+    
+    # Check if CSV files exist; if not, create dummy data
     sirh_path = IMPORTS_DIR / "extrait_sirh.csv"
     eval_path = IMPORTS_DIR / "extrait_eval.csv"
     sond_path = IMPORTS_DIR / "extrait_sondage.csv"
-    for p in (sirh_path, eval_path, sond_path):
-        if not p.exists():
-            raise SystemExit(f"Fichier manquant: {p}")
-
-    # Chargement CSV
-    sirh = pd.read_csv(sirh_path, encoding="utf-8")
-    evaldf = pd.read_csv(eval_path, encoding="utf-8")
-    sond = pd.read_csv(sond_path, encoding="utf-8")
+    
+    csv_exists = sirh_path.exists() and eval_path.exists() and sond_path.exists()
+    
+    if not csv_exists:
+        print("[Initialisation_SQLITE] CSV files not found; creating dummy data for testing...")
+        # Create minimal dummy data
+        sirh = pd.DataFrame({
+            "id_employee": [1, 2, 3, 4, 5],
+            "age": [30, 35, 40, 28, 45],
+            "revenu_mensuel": [2000, 2500, 3000, 1800, 3500],
+            "nombre_experiences_precedentes": [2, 3, 5, 1, 7],
+            "nombre_heures_travailless": [35, 40, 40, 35, 40],
+            "annee_experience_totale": [5, 8, 12, 3, 15],
+            "annees_dans_l_entreprise": [3, 5, 8, 2, 10],
+            "annees_dans_le_poste_actuel": [2, 3, 5, 1, 7],
+            "genre": ["M", "F", "M", "F", "M"],
+            "statut_marital": ["CELIBATAIRE", "MARIE", "CELIBATAIRE", "MARIE", "DIVORCE"],
+            "departement": ["IT", "HR", "FINANCE", "IT", "OPERATIONS"],
+            "poste": ["ENGINEER", "MANAGER", "ANALYST", "JUNIOR", "DIRECTOR"],
+        })
+        evaldf = pd.DataFrame({
+            "eval_number": ["EMP001", "EMP002", "EMP003", "EMP004", "EMP005"],
+            "id_employee": [1, 2, 3, 4, 5],
+            "satisfaction_employee_environnement": [7, 8, 6, 9, 7],
+            "note_evaluation_precedente": [3.5, 4.0, 3.8, 3.2, 4.2],
+            "niveau_hierarchique_poste": [2, 3, 2, 1, 4],
+            "satisfaction_employee_nature_travail": [7, 8, 7, 8, 9],
+            "satisfaction_employee_equipe": [8, 7, 8, 9, 8],
+            "satisfaction_employee_equilibre_pro_perso": [6, 7, 5, 8, 6],
+            "note_evaluation_actuelle": [3.6, 4.1, 3.9, 3.5, 4.3],
+            "augementation_salaire_precedente": ["5%", "3%", "4%", "2%", "6%"],
+            "heure_supplementaires": ["OUI", "NON", "OUI", "NON", "NON"],
+        })
+        sond = pd.DataFrame({
+            "code_sondage": ["EMP001", "EMP002", "EMP003", "EMP004", "EMP005"],
+            "id_employee": [1, 2, 3, 4, 5],
+            "a_quitte_l_entreprise": ["NON", "NON", "NON", "NON", "OUI"],
+            "domaine_etude": ["INFORMATIQUE", "GESTION", "FINANCE", "INFORMATIQUE", "MANAGEMENT"],
+            "ayant_enfants": ["OUI", "OUI", "NON", "OUI", "NON"],
+            "frequence_deplacement": ["RAREMENT", "SOUVENT", "RAREMENT", "JAMAIS", "SOUVENT"],
+            "nombre_participation_pee": [2, 1, 0, 3, 5],
+            "nb_formations_suivies": [3, 2, 4, 1, 6],
+            "nombre_employee_sous_responsabilite": [0, 5, 0, 0, 10],
+            "distance_domicile_travail": [15, 25, 10, 30, 20],
+            "niveau_education": [3, 4, 3, 2, 4],
+            "annees_depuis_la_derniere_promotion": [1, 2, 3, 0, 4],
+            "annes_sous_responsable_actuel": [2, 3, 0, 0, 8],
+        })
+    else:
+        if not IMPORTS_DIR.exists():
+            raise SystemExit(f"Dossier imports introuvable: {IMPORTS_DIR}")
+        for p in (sirh_path, eval_path, sond_path):
+            if not p.exists():
+                raise SystemExit(f"Fichier manquant: {p}")
+        # Chargement CSV
+        sirh = pd.read_csv(sirh_path, encoding="utf-8")
+        evaldf = pd.read_csv(eval_path, encoding="utf-8")
+        sond = pd.read_csv(sond_path, encoding="utf-8")
 
     # SIRH: numériques + catégorielles en majuscules
     for col in [
@@ -275,6 +328,9 @@ def lancesqlite_Initialisation():
 
 
 def lancepostgres_Initialisation():
+    if psycopg is None:
+        raise SystemExit("psycopg is required for PostgreSQL. Install it: pip install psycopg")
+    
     print(f"[DEBUG] SQL_DIR = {SQL_DIR}")
     if not SQL_DIR.exists():
         raise SystemExit(
