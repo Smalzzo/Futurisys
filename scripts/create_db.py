@@ -11,6 +11,10 @@ except ImportError:
     psycopg = None  # Optional for SQLite-only usage
 
 from sqlalchemy import create_engine, text
+import logging
+
+# Module logger (configured by the app's logging.basicConfig)
+logger = logging.getLogger(__name__)
 
 # Essayez d'utiliser la config + ORM de l'app (même DB / mêmes tables)
 try:
@@ -76,60 +80,32 @@ def _upper_strip_series(s: pd.Series) -> pd.Series:
 
 
 def lancesqlite_Initialisation():
-    print(f"[Initialisation_SQLITE] IMPORTS_DIR = {IMPORTS_DIR}")
+    logger.info("[Initialisation_SQLITE] Starting SQLite initialization")
+    logger.info("[Initialisation_SQLITE] IMPORTS_DIR = %s", IMPORTS_DIR)
     
     # Check if CSV files exist; if not, create dummy data
     sirh_path = IMPORTS_DIR / "extrait_sirh.csv"
     eval_path = IMPORTS_DIR / "extrait_eval.csv"
     sond_path = IMPORTS_DIR / "extrait_sondage.csv"
     
+    logger.info(
+        "[Initialisation_SQLITE] Checking CSV presence: sirh=%s(%s), eval=%s(%s), sond=%s(%s)",
+        sirh_path,
+        sirh_path.exists(),
+        eval_path,
+        eval_path.exists(),
+        sond_path,
+        sond_path.exists(),
+    )
     csv_exists = sirh_path.exists() and eval_path.exists() and sond_path.exists()
-    
+
     if not csv_exists:
-        print("[Initialisation_SQLITE] CSV files not found; creating dummy data for testing...")
-        # Create minimal dummy data
-        sirh = pd.DataFrame({
-            "id_employee": [1, 2, 3, 4, 5],
-            "age": [30, 35, 40, 28, 45],
-            "revenu_mensuel": [2000, 2500, 3000, 1800, 3500],
-            "nombre_experiences_precedentes": [2, 3, 5, 1, 7],
-            "nombre_heures_travailless": [35, 40, 40, 35, 40],
-            "annee_experience_totale": [5, 8, 12, 3, 15],
-            "annees_dans_l_entreprise": [3, 5, 8, 2, 10],
-            "annees_dans_le_poste_actuel": [2, 3, 5, 1, 7],
-            "genre": ["M", "F", "M", "F", "M"],
-            "statut_marital": ["CELIBATAIRE", "MARIE", "CELIBATAIRE", "MARIE", "DIVORCE"],
-            "departement": ["IT", "HR", "FINANCE", "IT", "OPERATIONS"],
-            "poste": ["ENGINEER", "MANAGER", "ANALYST", "JUNIOR", "DIRECTOR"],
-        })
-        evaldf = pd.DataFrame({
-            "eval_number": ["EMP001", "EMP002", "EMP003", "EMP004", "EMP005"],
-            "id_employee": [1, 2, 3, 4, 5],
-            "satisfaction_employee_environnement": [7, 8, 6, 9, 7],
-            "note_evaluation_precedente": [3.5, 4.0, 3.8, 3.2, 4.2],
-            "niveau_hierarchique_poste": [2, 3, 2, 1, 4],
-            "satisfaction_employee_nature_travail": [7, 8, 7, 8, 9],
-            "satisfaction_employee_equipe": [8, 7, 8, 9, 8],
-            "satisfaction_employee_equilibre_pro_perso": [6, 7, 5, 8, 6],
-            "note_evaluation_actuelle": [3.6, 4.1, 3.9, 3.5, 4.3],
-            "augementation_salaire_precedente": ["5%", "3%", "4%", "2%", "6%"],
-            "heure_supplementaires": ["OUI", "NON", "OUI", "NON", "NON"],
-        })
-        sond = pd.DataFrame({
-            "code_sondage": ["EMP001", "EMP002", "EMP003", "EMP004", "EMP005"],
-            "id_employee": [1, 2, 3, 4, 5],
-            "a_quitte_l_entreprise": ["NON", "NON", "NON", "NON", "OUI"],
-            "domaine_etude": ["INFORMATIQUE", "GESTION", "FINANCE", "INFORMATIQUE", "MANAGEMENT"],
-            "ayant_enfants": ["OUI", "OUI", "NON", "OUI", "NON"],
-            "frequence_deplacement": ["RAREMENT", "SOUVENT", "RAREMENT", "JAMAIS", "SOUVENT"],
-            "nombre_participation_pee": [2, 1, 0, 3, 5],
-            "nb_formations_suivies": [3, 2, 4, 1, 6],
-            "nombre_employee_sous_responsabilite": [0, 5, 0, 0, 10],
-            "distance_domicile_travail": [15, 25, 10, 30, 20],
-            "niveau_education": [3, 4, 3, 2, 4],
-            "annees_depuis_la_derniere_promotion": [1, 2, 3, 0, 4],
-            "annes_sous_responsable_actuel": [2, 3, 0, 0, 8],
-        })
+        msg = (
+            f"[Initialisation_SQLITE] CSV files not found. Expected: "
+            f"{sirh_path.name}, {eval_path.name}, {sond_path.name} in {IMPORTS_DIR}"
+        )
+        logger.error(msg)
+        raise FileNotFoundError(msg)
     else:
         if not IMPORTS_DIR.exists():
             raise SystemExit(f"Dossier imports introuvable: {IMPORTS_DIR}")
@@ -137,9 +113,14 @@ def lancesqlite_Initialisation():
             if not p.exists():
                 raise SystemExit(f"Fichier manquant: {p}")
         # Chargement CSV
+        logger.info("[Initialisation_SQLITE] Reading CSV files from %s", IMPORTS_DIR)
         sirh = pd.read_csv(sirh_path, encoding="utf-8")
         evaldf = pd.read_csv(eval_path, encoding="utf-8")
         sond = pd.read_csv(sond_path, encoding="utf-8")
+        logger.info(
+            "[Initialisation_SQLITE] Loaded CSVs: SIRH=%s rows, EVAL=%s rows, SOND=%s rows",
+            len(sirh), len(evaldf), len(sond)
+        )
 
     # SIRH: numériques + catégorielles en majuscules
     for col in [
@@ -215,6 +196,13 @@ def lancesqlite_Initialisation():
 
     # Jointures
     df = sirh.merge(evaldf, on="id_employee", how="left").merge(sond, on="id_employee", how="left")
+    try:
+        logger.info(
+            "[Initialisation_SQLITE] After merge: rows=%s, cols=%s, unique_ids=%s",
+            len(df), df.shape[1], df["id_employee"].nunique() if "id_employee" in df.columns else "N/A",
+        )
+    except Exception:
+        pass
 
     # Features dérivées (logs naturels > 0)
     def _log_pos(series: pd.Series) -> pd.Series:
@@ -264,6 +252,11 @@ def lancesqlite_Initialisation():
     ]
     cols_presentes = [c for c in cols if c in df.columns]
     df_out = df[cols_presentes].copy()
+    missing_cols = [c for c in cols if c not in cols_presentes]
+    logger.info(
+        "[Initialisation_SQLITE] Columns present=%s/%s; missing=%s",
+        len(cols_presentes), len(cols), missing_cols,
+    )
 
     # Assure la conformité NOT NULL du schéma ORM SQLite
     # 1) id_employee non nul et entier
@@ -317,14 +310,31 @@ def lancesqlite_Initialisation():
     engine = _sqlite_engine()
     assert Base is not None
     # Recrée proprement les tables de logs pour garantir un PK auto-incrément compatible SQLite
-    with engine.begin() as conn:
-        conn.execute(text("DROP TABLE IF EXISTS prediction_log"))
-        conn.execute(text("DROP TABLE IF EXISTS error_log"))
-    Base.metadata.create_all(bind=engine)
-    with engine.begin() as conn:
-        conn.execute(text("DELETE FROM employee_features"))
-    df_out.to_sql("employee_features", con=engine, if_exists="append", index=False)
-    print(f"[Initialisation_SQLITE] {len(df_out)} lignes insérées dans employee_features")
+    try:
+        with engine.begin() as conn:
+            logger.info("[Initialisation_SQLITE] Dropping log tables if they exist")
+            conn.execute(text("DROP TABLE IF EXISTS prediction_log"))
+            conn.execute(text("DROP TABLE IF EXISTS error_log"))
+        logger.info("[Initialisation_SQLITE] Creating all tables via SQLAlchemy metadata")
+        Base.metadata.create_all(bind=engine)
+        with engine.begin() as conn:
+            logger.info("[Initialisation_SQLITE] Cleaning employee_features table")
+            conn.execute(text("DELETE FROM employee_features"))
+        logger.info("[Initialisation_SQLITE] Inserting %s rows into employee_features", len(df_out))
+        df_out.to_sql("employee_features", con=engine, if_exists="append", index=False)
+        has_12 = False
+        try:
+            if "id_employee" in df_out.columns:
+                has_12 = bool((df_out["id_employee"] == 12).any())
+        except Exception:
+            pass
+        logger.info(
+            "[Initialisation_SQLITE] Done. Inserted rows=%s; id_employee=12 present=%s",
+            len(df_out), has_12,
+        )
+    except Exception:
+        logger.exception("[Initialisation_SQLITE] SQLite initialization failed")
+        raise
 
 
 def lancepostgres_Initialisation():

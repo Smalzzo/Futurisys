@@ -1,12 +1,15 @@
 # app/ml/model_loader.py
 import os
+import logging
 import joblib
 
-MODEL_LOCAL = os.getenv("MODEL_LOCAL", "app/ml/model.pkl")
+# Prefer explicit MODEL_LOCAL, else fall back to MODEL_PATH for consistency with ModelService
+MODEL_LOCAL = os.getenv("MODEL_LOCAL") or os.getenv("MODEL_PATH") or "app/ml/model.pkl"
 MODEL_REPO_ID = os.getenv("MODEL_REPO_ID", "sma-nas/Futurisys")
 MODEL_FILENAME = os.getenv("MODEL_FILENAME", "model.pkl")
 
 _model = None
+_logger = logging.getLogger(__name__)
 
 def _download_from_hub(local_dir: str):
     """Download the model file from Hugging Face Hub into local_dir.
@@ -35,6 +38,14 @@ def get_model():
     if _model is None:
         if not os.path.exists(MODEL_LOCAL):
             os.makedirs(os.path.dirname(MODEL_LOCAL), exist_ok=True)
-            _download_from_hub(os.path.dirname(MODEL_LOCAL))
+            try:
+                _download_from_hub(os.path.dirname(MODEL_LOCAL))
+            except ImportError:
+                # Graceful degrade: log and skip download. Let caller lazily load later.
+                _logger.warning(
+                    "huggingface_hub not installed; skipping Hub download. "
+                    "Set MODEL_LOCAL/MODEL_PATH to an existing file or install huggingface_hub."
+                )
+                return None
         _model = joblib.load(MODEL_LOCAL)
     return _model

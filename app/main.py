@@ -10,9 +10,13 @@ from app.ml.serve import model_service
 from app.core.errors import http_exception_handler
 import os
 import sys
-import subprocess
+import logging
 from pathlib import Path
 from app.ml.model_loader import get_model
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -21,26 +25,39 @@ async def lifespan(app: FastAPI):
     try:
         # Ensure data directory exists (for SQLite database)
         os.makedirs("./data", exist_ok=True)
+        logger.info("Data directory created/verified")
         
         # Preload the model
         get_model()  
         
-        if make_url(get_settings().DATABASE_URL).get_backend_name() == "sqlite":
+        db_url = get_settings().DATABASE_URL
+        logger.info(f"Database URL: {db_url}")
+        backend = make_url(db_url).get_backend_name()
+        logger.info(f"Database backend: {backend}")
+        
+        if backend == "sqlite":
+            logger.info("Setting up SQLite database...")
             Base.metadata.create_all(bind=engine)
+            logger.info("SQLite tables created")
+            
+            # Try to initialize database with data
             try:
-                script_path = Path(__file__).resolve().parents[1] / "scripts" / "create_db.py"
-                subprocess.run([sys.executable, str(script_path)], check=True)
-            except Exception:
-                pass
+                logger.info("Attempting to import and call lancesqlite_Initialisation()...")
+                from scripts.create_db import lancesqlite_Initialisation
+                logger.info("Import successful, calling function...")
+                lancesqlite_Initialisation()
+                logger.info("Database initialized with employee data")
+            except ImportError as e:
+                logger.error(f"Failed to import lancesqlite_Initialisation: {e}")
+            except Exception as e:
+                logger.error(f"Database initialization failed: {e}", exc_info=True)
     except Exception as e:
-        import logging
-        logging.warning(f"Startup error: {e}")
+        logger.error(f"Startup error: {e}", exc_info=True)
     
     try:
         model_service.load()
     except FileNotFoundError:
-        import logging
-        logging.warning("Model file not found during startup; will load on first prediction.")
+        logger.warning("Model file not found during startup; will load on first prediction.")
     
     yield
     try:
