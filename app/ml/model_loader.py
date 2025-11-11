@@ -5,7 +5,7 @@ import joblib
 
 # Prefer explicit MODEL_LOCAL, else fall back to MODEL_PATH for consistency with ModelService
 MODEL_LOCAL = os.getenv("MODEL_LOCAL") or os.getenv("MODEL_PATH") or "app/ml/model.pkl"
-MODEL_REPO_ID = os.getenv("MODEL_REPO_ID", "sma-nas/Futurisys")
+MODEL_REPO_ID = os.getenv("MODEL_REPO_ID", "sma-nas/Futurysis")
 MODEL_FILENAME = os.getenv("MODEL_FILENAME", "model.pkl")
 
 _model = None
