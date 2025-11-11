@@ -86,10 +86,20 @@ jobs:
           set -e
           cd deploy
           git init
-          # Do not initialize or track Git LFS here. The repository now stores the
-          # small `app/ml/model.pkl` as a normal git blob, and attempting to
-          # track "*.pkl" in this temporary deploy repo caused pushes to fail
-          # due to missing LFS objects in the runner environment.
+          # Ensure we don't push LFS configuration or pointers. Remove any
+          # .gitattributes copied into the temporary deploy repo so the remote
+          # pre-receive hook won't treat files as LFS pointers.
+          rm -f .gitattributes || true
+
+          # Ensure the model file is the actual blob from the checked-out
+          # workspace (not an LFS pointer). Copy it from the runner's working
+          # directory if present.
+          if [ -f ../app/ml/model.pkl ]; then
+            mkdir -p app/ml
+            cp ../app/ml/model.pkl app/ml/model.pkl
+          fi
+
+          # Add everything and commit
           git add .
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
