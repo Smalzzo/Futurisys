@@ -10,4 +10,7 @@ venv/
 .env
 .DS_Store
 Thumbs.db
+*.pkl
+models/
+app/ml/model.pkl
 

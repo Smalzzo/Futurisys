@@ -12,12 +12,15 @@ import os
 import sys
 import subprocess
 from pathlib import Path
+from app.ml.model_loader import get_model
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # --- Startup ---
     # Crée les tables automatiquement si backend SQLite
     try:
+        # précharge le modèle
+        get_model()  
         if make_url(get_settings().DATABASE_URL).get_backend_name() == "sqlite":
             import os
             os.makedirs("/data", exist_ok=True)
