@@ -45,7 +45,7 @@ class Settings(BaseSettings):
         if self.database_url_env:  # override complet
             return self.database_url_env        
         
-        return "sqlite:////data/app.db"
+        return "sqlite:///./data/app.db"
 
     @property
     def DATABASE_URL(self) -> str:        

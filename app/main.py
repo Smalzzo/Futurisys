@@ -17,21 +17,25 @@ from app.ml.model_loader import get_model
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # --- Startup ---
-    # Crée les tables automatiquement si backend SQLite
+    # Create data directory for SQLite if needed, then create tables
     try:
-        # précharge le modèle
+        # Ensure data directory exists (for SQLite database)
+        os.makedirs("./data", exist_ok=True)
+        
+        # Preload the model
         get_model()  
+        
         if make_url(get_settings().DATABASE_URL).get_backend_name() == "sqlite":
-            import os
-            os.makedirs("/data", exist_ok=True)
             Base.metadata.create_all(bind=engine)
             try:
                 script_path = Path(__file__).resolve().parents[1] / "scripts" / "create_db.py"
                 subprocess.run([sys.executable, str(script_path)], check=True)
             except Exception:
                 pass
-    except Exception:
-        pass
+    except Exception as e:
+        import logging
+        logging.warning(f"Startup error: {e}")
+    
     try:
         model_service.load()
     except FileNotFoundError:
@@ -39,7 +43,10 @@ async def lifespan(app: FastAPI):
         logging.warning("Model file not found during startup; will load on first prediction.")
     
     yield
-    model_service.close()
+    try:
+        model_service.close()
+    except Exception:
+        pass
 
 
 def create_app() -> FastAPI:
