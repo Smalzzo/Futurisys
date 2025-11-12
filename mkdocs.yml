@@ -7,7 +7,7 @@ theme:
   features:
     - navigation.sections
     - navigation.top
-    - toc.integrate
+    - toc.integrate 
     - content.code.copy
 nav:
   - Accueil: index.md
