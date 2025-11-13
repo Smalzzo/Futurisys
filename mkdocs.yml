@@ -16,6 +16,7 @@ nav:
     - Aperçu: api.md
     - Référence (routes): reference/api.md
   - Modèle ML: model.md
+  - Données: data.md
   - Architecture: architecture.md
   - Déploiement: deployment.md
   - Configuration: configuration.md
