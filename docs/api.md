@@ -1,50 +1,19 @@
-# API
+# API de prédiction Futurisys
 
-- Base URL: `/api/v1`
-- Auth: en-tête `x-api-key: <votre-cle>`
+Cette API expose un modèle de Machine Learning qui prédit si un employé est susceptible de **quitter l’entreprise**.
 
-## Endpoints
+- Framework : **FastAPI**
+- Préfixe des routes : `/api/v1`
+- Format : JSON
+- Authentification : **clé API** via l’en-tête HTTP `x-api-key`
 
-### Santé
-- `GET /api/v1/health`
-- Réponse: `{ "status Api": "ok" }`
+---
 
-### Prédiction directe
-- `POST /api/v1/predict`
-- Headers: `x-api-key`
-- Corps JSON minimal (exemple):
-```
-{
-  "age": 35,
-  "poste": "Dev"
-}
-```
-- Réponse:
-```
-{
-  "employee_id": null,
-  "pred_quitte_entreprise": "OUI" | "NON"
-}
-```
+## 1. Authentification par API Key
 
-Exemple curl:
-```
-curl -H "x-api-key: change" \
-     -H "Content-Type: application/json" \
-     -X POST http://localhost:8000/api/v1/predict \
-     -d '{"age": 35, "poste": "Dev"}'
-```
+Toutes les routes de prédiction sont protégées.
 
-### Prédiction par identifiant
-- `GET /api/v1/predict/by-id/{employee_id}`
-- Headers: `x-api-key`
-- Réponse:
-```
-{
-  "employee_id": 123,
-  "pred_quitte_entreprise": "OUI" | "NON"
-}
-```
+### En-tête attendu
 
-Note: les schémas d’entrée sont définis dans `app/api/schemas.py`.
-
+```http
+x-api-key: <VOTRE_CLE_API>
