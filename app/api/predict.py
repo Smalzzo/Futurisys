@@ -86,7 +86,7 @@ def _normalize_payload(d: Dict[str, Any]) -> Dict[str, Any]:
 
 
 @router.post("/predict", response_model=PredictionResponse, dependencies=[Depends(get_api_key)])
-def predict(features: PredictIn, db: Session = Depends(get_db)):
+def predict(features: PredictIn, db: Session = Depends(get_db)) -> PredictionResponse:
     """Effectue une prédiction à partir du JSON envoyé par le client.
 
     Args:
@@ -94,7 +94,7 @@ def predict(features: PredictIn, db: Session = Depends(get_db)):
         db: Session SQLAlchemy (utilisée pour journaliser la requête).
 
     Returns:
-        `PredictionResponse` contenant l’identifiant et le label `OUI/NON`.
+        `PredictionResponse` contenant l'identifiant et le label `OUI/NON`.
     """
     t0 = time.perf_counter()
     d = features.model_dump(exclude_none=True)
@@ -144,18 +144,18 @@ def health():
     response_model=PredictionResponse,
     dependencies=[Depends(get_api_key)],
 )
-def predict_by_id(employee_id: int = Path(..., ge=1), db: Session = Depends(get_db)):
+def predict_by_id(employee_id: int = Path(..., ge=1), db: Session = Depends(get_db)) -> PredictionResponse:
     """Effectue une prédiction en lisant les features déjà stockées en base.
 
     Args:
-        employee_id: Identifiant de l’employé dont on lit les features.
+        employee_id: Identifiant de l'employé dont on lit les features.
         db: Session SQLAlchemy pour lire `EmployeeFeatures` et sauver les logs.
 
     Returns:
         `PredictionResponse` identique à celui de `/predict`.
 
     Raises:
-        HTTPException: Si aucune ligne de features n’est trouvée pour l’identifiant.
+        HTTPException: Si aucune ligne de features n'est trouvée pour l'identifiant.
     """
     t0 = time.perf_counter()
     row: Optional[EmployeeORM] = (
