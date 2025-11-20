@@ -20,7 +20,7 @@ permissions:
   id-token: write
 
 jobs:
-  INSTALL-BUILD-TEST:
+  INSTALL-BUILD-TEST: 
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
