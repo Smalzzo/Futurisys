@@ -111,7 +111,7 @@ jobs:
           PY
       
       # Préparer un dossier d'upload sans .git/.github, *.db, ni fichiers binaires
-      # (HF refuses binary files; the model will be downloaded at runtime)
+      # (HF refuses les binaires ; le modèle sera téléchargé au runtime)
       - name: Préparer le dossier de déploiement (sources uniquement)
         run: |
           set -e
