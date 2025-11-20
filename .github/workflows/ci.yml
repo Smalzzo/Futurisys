@@ -34,14 +34,14 @@ jobs:
           python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
           pip install build
-      - name: Build package (sdist + wheel)
-        run: python -m build
-      - name: Install Build
+      - name: Install package in editable mode
         run: |
-          pip install dist/*.whl || pip install dist/*.tar.gz
+          pip install -e .
       - name: Tests
         run: |
           pytest --cov=app --cov-report=xml --cov-report=term-missing
+      - name: Build package (sdist + wheel)
+        run: python -m build
       - name: Coverage
         uses: actions/upload-artifact@v4
         with:
