@@ -31,24 +31,26 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Installation dependances
         run: |
-          python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          pip install build
+          python -m pip install --upgrade pip --quiet
+          if [ -f requirements.txt ]; then pip install -r requirements.txt --quiet; fi
+          pip install build --quiet
+      - name: Build package (sdist + wheel)
+        run: python -m build --quiet 2>/dev/null || python -m build
       - name: Install package in editable mode
         run: |
-          pip install -e .
+          pip install -e . --quiet
       - name: Tests
         run: |
-          pytest --cov=app --cov-report=xml --cov-report=term-missing
+          pytest --cov=app --cov-report=xml --cov-report=term-missing -q --disable-warnings
       - name: Display Coverage Summary
         if: always()
         run: |
           echo "## Coverage Report" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
-          coverage report >> $GITHUB_STEP_SUMMARY
+          coverage report --skip-empty >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
       - name: Build package (sdist + wheel)
-        run: python -m build
+        run: python -m build --quiet 2>/dev/null || python -m build
       - name: Coverage
         uses: actions/upload-artifact@v4
         with:
@@ -79,8 +81,8 @@ jobs:
           MODEL_FILENAME: model.pkl
         run: |
           set -euo pipefail
-          python -m pip install --upgrade pip
-          pip install huggingface_hub
+          python -m pip install --upgrade pip --quiet
+          pip install huggingface_hub --quiet
           python - <<'PY'
           import os, sys
           from huggingface_hub import HfApi, create_repo
@@ -114,11 +116,12 @@ jobs:
         run: |
           set -e
           rm -rf deploy && mkdir deploy
-          rsync -a --delete \
+          rsync -a --delete --quiet \
             --exclude='.git' --exclude='.github' \
             --exclude='*.db' --exclude='**/*.db' \
             --exclude='app/ml/model.pkl' \
             ./ deploy/
+          echo "Deploy directory prepared"
 
       - name: Push sources vers la Space (HF build)
         env:
@@ -127,13 +130,14 @@ jobs:
         run: |
           set -e
           cd deploy
-          git init          
-          # Add everything (model.pkl is already excluded by rsync) and commit
+          git init -q
           git add .
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git commit -m "Deploy ${GITHUB_SHA}"
+          git commit -m "Deploy ${GITHUB_SHA}" -q
           git branch -M main
           git remote add origin "https://oauth2:${HF_TOKEN}@huggingface.co/spaces/${HF_SPACE}"
-          git push -f origin main
+          echo "Pushing to Hugging Face Space..."
+          git push -f origin main -q
+          echo "Deployment successful"
 
