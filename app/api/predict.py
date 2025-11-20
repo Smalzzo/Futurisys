@@ -48,6 +48,15 @@ router = APIRouter()
 
 
 def _normalize_payload(d: Dict[str, Any]) -> Dict[str, Any]:
+    """Nettoie les valeurs du payload et prépare les colonnes dérivées.
+
+    Args:
+        d: Dictionnaire brut issu du modèle Pydantic.
+
+    Returns:
+        Nouveau dictionnaire où les chaînes sont en majuscules, les booléens
+        homogénéisés, et les chaînes vides remplacées par `None`.
+    """
     out = dict(d)
 
     for k in [
@@ -78,6 +87,15 @@ def _normalize_payload(d: Dict[str, Any]) -> Dict[str, Any]:
 
 @router.post("/predict", response_model=PredictionResponse, dependencies=[Depends(get_api_key)])
 def predict(features: PredictIn, db: Session = Depends(get_db)):
+    """Effectue une prédiction à partir du JSON envoyé par le client.
+
+    Args:
+        features: Payload validé par `PredictIn`.
+        db: Session SQLAlchemy (utilisée pour journaliser la requête).
+
+    Returns:
+        `PredictionResponse` contenant l’identifiant et le label `OUI/NON`.
+    """
     t0 = time.perf_counter()
     d = features.model_dump(exclude_none=True)
     d = _normalize_payload(d)
@@ -117,6 +135,7 @@ def predict(features: PredictIn, db: Session = Depends(get_db)):
 
 @router.get("/health")
 def health():
+    """Endpoint de santé utilisé par les probes ou le monitoring."""
     return {"status Api": "ok"}
 
 
@@ -126,6 +145,18 @@ def health():
     dependencies=[Depends(get_api_key)],
 )
 def predict_by_id(employee_id: int = Path(..., ge=1), db: Session = Depends(get_db)):
+    """Effectue une prédiction en lisant les features déjà stockées en base.
+
+    Args:
+        employee_id: Identifiant de l’employé dont on lit les features.
+        db: Session SQLAlchemy pour lire `EmployeeFeatures` et sauver les logs.
+
+    Returns:
+        `PredictionResponse` identique à celui de `/predict`.
+
+    Raises:
+        HTTPException: Si aucune ligne de features n’est trouvée pour l’identifiant.
+    """
     t0 = time.perf_counter()
     row: Optional[EmployeeORM] = (
         db.query(EmployeeORM).filter(EmployeeORM.id_employee == employee_id).one_or_none()
@@ -154,4 +185,3 @@ def predict_by_id(employee_id: int = Path(..., ge=1), db: Session = Depends(get_
         logging.warning("save_prediction_log failed on /predict/by-id: %s", e)
 
     return PredictionResponse(employee_id=employee_id, pred_quitte_entreprise=pred_str)
-

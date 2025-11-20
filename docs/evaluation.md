@@ -85,4 +85,4 @@ Points clés :
   - avec signaux de risque (ancienneté faible, satisfaction moyenne/basse, poste exposé),
   - mais qui, dans les faits, n’ont pas quitté l’entreprise.
 
-👉 Dans ce contexte, l’arbitrage a été fait en faveur du **rappel** : on accepte davantage de faux positifs pour réduire fortement le nombre de départs non détectés.
+ Dans ce contexte, l’arbitrage a été fait en faveur du **rappel** : on accepte davantage de faux positifs pour réduire fortement le nombre de départs non détectés.

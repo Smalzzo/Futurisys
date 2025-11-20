@@ -120,7 +120,7 @@ Pour reproduire le modèle :
 4. Réapprendre un seuil optimal F2.
 5. Sérialiser le pipeline complet dans `model.pkl`.
 
-⚠️ Toute modification de la structure de données (nouvelles colonnes, changement de modalités…) nécessite :
+Toute modification de la structure de données (nouvelles colonnes, changement de modalités…) nécessite :
 - une mise à jour du préprocesseur,
 - une ré-évaluation du modèle,
 - et idéalement une nouvelle version (modèle + documentation).

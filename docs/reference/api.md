@@ -1,7 +1,5 @@
 # Référence (routes)
 
-Cette section peut être générée automatiquement via mkdocstrings si vous documentez les fonctions et modèles.
-
 ## app.api.predict
 
 ::: app.api.predict
@@ -10,4 +8,3 @@ Cette section peut être générée automatiquement via mkdocstrings si vous doc
         - predict
         - predict_by_id
         - health
-
